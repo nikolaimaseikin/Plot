@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Plot</string>
+    <string name="wave_chart">Wave Chart</string>
 </resources>
