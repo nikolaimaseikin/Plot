@@ -39,16 +39,16 @@ fun YAxis(axisData: YAxisData, modifier: Modifier){
                 )
             )
             drawLine(
-                start = Offset(x = canvasWidth - 10f, y = i * (canvasHeight / axisData.steps) ),
-                end = Offset(x = canvasWidth, y = i * (canvasHeight / axisData.steps) ),
+                start = Offset(x = canvasWidth - 10f, y = i * (canvasHeight / axisData.steps)),
+                end = Offset(x = canvasWidth, y = i * (canvasHeight / axisData.steps)),
                 color = Color.Black,
-                strokeWidth = 1.dp.toPx()
+                strokeWidth = 3f
             )
         }
         drawLine(start = Offset(x = canvasWidth, y = 0f),
             end = Offset(x = canvasWidth, y = canvasHeight),
             color = Color.Black,
-            strokeWidth = 1.dp.toPx()
+            strokeWidth = 3f
         )
     }
 }

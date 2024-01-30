@@ -34,12 +34,12 @@ fun XAxis(
             val canvasHeight = size.height
             val period = 1f / axisData.sampleRate
             //Расчёт количества точек в выборке
-            val deltaTimePerPx = (axisData.signal.size / canvasWidth).roundToInt() * period
+            val deltaTimePerPx = (axisData.signal.size / canvasWidth) * period
             drawLine(
-                start = Offset(x = 0.dp.toPx(), y = 0f ),
-                end = Offset(x = canvasWidth.dp.toPx(), y = 0f ),
+                start = Offset(x = 0f, y = 0f ),
+                end = Offset(x = canvasWidth, y = 0f ),
                 color = Color.Black,
-                strokeWidth = 1.dp.toPx()
+                strokeWidth = 3f
             )
             for(i in 0..axisData.steps){
                 drawText(
@@ -58,7 +58,7 @@ fun XAxis(
                     start = Offset(x = i * (canvasWidth / axisData.steps), y = 0f ),
                     end = Offset(x = i * (canvasWidth / axisData.steps), y = 10f ),
                     color = Color.Black,
-                    strokeWidth = 1.dp.toPx()
+                    strokeWidth = 3f
                 )
             }
         }

@@ -28,7 +28,7 @@ fun ChartsTopAppBar(
         actions = {
             IconButton(onClick = pickFile) {
                 Icon(
-                    painter = painterResource(R.drawable.upload_file),
+                    painter = painterResource(R.drawable.ic_launcher_background),
                     contentDescription = "Upload File"
                 )
             }
