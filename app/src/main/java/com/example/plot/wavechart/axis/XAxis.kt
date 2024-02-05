@@ -33,6 +33,7 @@ fun XAxis(
             val canvasWidth = size.width
             val canvasHeight = size.height
             val period = 1f / axisData.sampleRate
+            val startTime = axisData.startIndex * period
             //Расчёт количества точек в выборке
             val deltaTimePerPx = (axisData.signal.size / canvasWidth) * period
             drawLine(
@@ -41,10 +42,10 @@ fun XAxis(
                 color = Color.Black,
                 strokeWidth = 3f
             )
-            for(i in 0..axisData.steps){
+            for(i in 0 until axisData.steps){
                 drawText(
                     textMeasurer = textMeasurer,
-                    text = String.format("%.3f", i * (canvasWidth / axisData.steps) * deltaTimePerPx),
+                    text = String.format("%.3f",  startTime + i * (canvasWidth / axisData.steps) * deltaTimePerPx),
                     style = TextStyle(
                         fontSize = 12.sp,
                         color = Color.Black

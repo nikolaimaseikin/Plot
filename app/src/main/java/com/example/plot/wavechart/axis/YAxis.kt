@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 //TODO: Максимум и минимум данных по оси ищем по локальной выборке для рендеринга
+//TODO: Ось Y должна быть связанна с Y offset
 @OptIn(ExperimentalTextApi::class)
 @Composable
 fun YAxis(axisData: YAxisData, modifier: Modifier){
@@ -25,7 +26,7 @@ fun YAxis(axisData: YAxisData, modifier: Modifier){
         val canvasWidth = size.width
         val canvasHeight = size.height
         val axisStepValue = (axisData.maxValue - axisData.minValue) / axisData.steps
-        for(i in 0..axisData.steps){
+        for(i in 0 until axisData.steps){ //TODO: Пересмотреть вывод
             drawText(
                 textMeasurer = textMeasurer,
                 text = String.format("%.2f", (axisData.steps - i) * axisStepValue + axisData.minValue),

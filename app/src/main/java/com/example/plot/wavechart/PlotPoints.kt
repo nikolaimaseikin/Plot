@@ -4,6 +4,10 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -17,20 +21,20 @@ fun PlotPoints(
     sampleRate: Int,
     interpolation: Boolean,
     drawPoints: Boolean,
-    onZoom: (zoomChange: Float) -> Unit,
-    onOffset: (offsetChange: Offset) -> Unit,
+    onTransform: (zoomChange: Float, offsetChange: Offset) -> Unit,
     modifier: Modifier
 ){
+    var zoom by remember { mutableStateOf(1f) }
     Canvas(modifier = modifier
         .transformable(state = rememberTransformableState { zoomChange, panChange, _ ->
-            onZoom(zoomChange)
-            onOffset(panChange)
+            onTransform(zoomChange, panChange)
         },
             lockRotationOnZoomPan = true)
     ){
         val canvasWidth = size.width
         val canvasHeight = size.height
-        val scalingFactor = (signal.max() - signal.min()) / canvasHeight
+        val maxValue = if(signal.isNotEmpty()) signal.max() else 0f
+        val scalingFactor = if(signal.isNullOrEmpty()) 0f else (signal.max() - signal.min()) / canvasHeight
         val pointsPerPx = (signal.size / canvasWidth)
         val samplingPeriod: Float = 1 / sampleRate.toFloat()
         val deltaTimePerPx: Float = pointsPerPx * samplingPeriod
@@ -42,8 +46,8 @@ fun PlotPoints(
                     color = Color.Blue,
                     radius = 2f,
                     center = Offset(
-                        x = ((index * samplingPeriod) / deltaTimePerPx),
-                        y = ((canvasHeight / 2) - (signal[index] / scalingFactor))
+                        x = (index * samplingPeriod) / deltaTimePerPx,
+                        y = (maxValue - signal[index]) / scalingFactor
                     )
                 )
             }
@@ -53,11 +57,11 @@ fun PlotPoints(
                     drawLine(
                         start = Offset(
                             x = (index * samplingPeriod) / deltaTimePerPx,
-                            y = (canvasHeight / 2) - (signal[index] / scalingFactor)
+                            y = (maxValue - signal[index]) / scalingFactor
                         ),
                         end = Offset(
                             x = ((index+1) * samplingPeriod) / deltaTimePerPx,
-                            y = (canvasHeight / 2) - (signal[index + 1] / scalingFactor)
+                            y = (maxValue - signal[index + 1]) / scalingFactor
                         ),
                         color = Color.Blue,
                         strokeWidth = 2f

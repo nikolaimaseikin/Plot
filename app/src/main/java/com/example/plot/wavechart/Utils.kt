@@ -3,7 +3,11 @@ package com.example.plot.wavechart
 import android.util.Log
 import androidx.compose.ui.geometry.Offset
 import kotlin.math.roundToInt
-//TODO: Column переделать в Dataclass
+//TODO: Исправить отображение осей
+//TODO: Реализовать масштабирование по оси Y
+//TODO: Продумать граничные случаи функций и реализовать обработку исключений
+//TODO: Реализовать отображение курсора
+
 fun getColumnsList(signal: List<Float>, canvasWidth: Float): MutableList<Set<Float>>{
     var separateValue = (signal.size / canvasWidth).roundToInt()
     if(separateValue <= 1) separateValue = 2
@@ -22,16 +26,21 @@ fun getColumnsList(signal: List<Float>, canvasWidth: Float): MutableList<Set<Flo
     return columns
 }
 
-fun getSubSignalList(signal: List<Float>, zoom: Float, offset: Offset): List<Float> {
-    val centerIndex = ((signal.size / 2) + (offset.x / zoom)).roundToInt()
-    if(centerIndex >= 0 ) centerIndex else 0
-    if(centerIndex < signal.size ) centerIndex else signal.size - 1
-    val windowSize = (signal.size / zoom).roundToInt()
-    val leftIndex: Int = centerIndex - (windowSize / 2f).roundToInt()
-    if(leftIndex >= 0) leftIndex else 0
-    val rightIndex: Int = centerIndex + (windowSize / 2f).roundToInt() - 1
-    if(rightIndex >= 0 && rightIndex < signal.size) rightIndex else (signal.size - 1)
-    val subList = signal.subList(leftIndex, rightIndex)
-    Log.d("Signal", "$subList")
-    return subList
+fun getSubSignalList(signal: List<Float>, centerIndex: Int, zoom: Float): List<Float> {
+    if(signal.isEmpty()){
+        return listOf()
+    }
+    val windowSize = (signal.size / zoom)
+        .coerceAtLeast(0f)
+        .coerceAtMost(signal.size.toFloat())
+    val leftIndex: Int = (centerIndex - (windowSize / 2f))
+        .roundToInt()
+        .coerceAtLeast(0)
+        .coerceAtMost(signal.size - 1)
+    val rightIndex: Int = ((centerIndex + (windowSize / 2f)).roundToInt() - 1)
+        .coerceAtLeast(0)
+        .coerceAtMost(signal.size - 1)
+    val subSignalListToPlotting = signal.subList(leftIndex, rightIndex)
+    Log.d("SubSignal", "WindowSise: $windowSize Left: $leftIndex Right: $rightIndex Zoom: $zoom Center: $centerIndex")
+    return subSignalListToPlotting
 }
