@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.dp
 
 //TODO: Обработать граничные случаи. Что, если в массиве нет элементов и пр...
 @Composable
-fun PlotPoints(
+fun Plotter(
     signal: List<Float>,
     sampleRate: Int,
     interpolation: Boolean,
@@ -34,7 +34,7 @@ fun PlotPoints(
         val canvasWidth = size.width
         val canvasHeight = size.height
         val maxValue = if(signal.isNotEmpty()) signal.max() else 0f
-        val scalingFactor = if(signal.isNullOrEmpty()) 0f else (signal.max() - signal.min()) / canvasHeight
+        val scalingFactor = if(signal.isEmpty()) 0f else (signal.max() - signal.min()) / canvasHeight
         val pointsPerPx = (signal.size / canvasWidth)
         val samplingPeriod: Float = 1 / sampleRate.toFloat()
         val deltaTimePerPx: Float = pointsPerPx * samplingPeriod

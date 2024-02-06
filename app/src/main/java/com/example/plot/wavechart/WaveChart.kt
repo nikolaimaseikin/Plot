@@ -90,7 +90,7 @@ fun WaveChart(signal: List<Float>,
                     //.border(width = 1.dp, color = Color.Red)
             )
             Column {
-                PlotPoints(
+                Plotter(
                     signal = subSignalListToPlotting,
                     sampleRate = sampleRate,
                     interpolation = true,
