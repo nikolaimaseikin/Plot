@@ -3,6 +3,7 @@ package com.example.plot
 import android.annotation.SuppressLint
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -19,6 +20,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -34,6 +36,13 @@ import kotlinx.coroutines.launch
 
 //TODO: Создать отдельный ViewModel и обрабатывать events и хранить state внутри него
 
+//TODO: Переработать ось X. Убрать метки времени, добавить отображение сетки
+// Добавить масштабирование сигнала по оси Y. Добавить отображение сетки
+// Для сеток добавить включение выключение видимости. Сетку по времени и по уровням сделать отдельными Composable компонентами
+// Добавить Timebar
+// Добавить курсоры
+
+
 class MainActivity : ComponentActivity() {
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     @OptIn(ExperimentalMaterial3Api::class)
@@ -41,7 +50,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             val context = LocalContext.current
-            var xAxis by remember{ mutableStateOf(listOf<Float>())}
+            var signal by rememberSaveable{ mutableStateOf(listOf<Float>())}
             val repo: FileRepository = remember {
                 FileRepositoryImpl()
             }
@@ -50,7 +59,7 @@ class MainActivity : ComponentActivity() {
                 uri?.let {
                     lifecycleScope.launch {
                         repo.loadDocument(context, it)
-                        xAxis = repo.getAxisData(axis = Axis.X)
+                        signal = repo.getAxisData(axis = Axis.X)
                     }
                 }
             }
@@ -71,8 +80,10 @@ class MainActivity : ComponentActivity() {
                             .fillMaxSize()
                             .padding(top = 70.dp)) {
                             WaveChart(
-                                signal = xAxis,
+                                signal = signal,
                                 sampleRate = 128000,
+                                xGridSteps = 6,
+                                yGridSteps = 10,
                                 modifier = Modifier
                                     .height(400.dp)
                                     .fillMaxWidth()

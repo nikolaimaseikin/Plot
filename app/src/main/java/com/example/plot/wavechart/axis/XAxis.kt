@@ -24,6 +24,8 @@ import kotlin.math.roundToInt
 @OptIn(ExperimentalTextApi::class)
 @Composable
 fun XAxis(
+    signal: List<Float>,
+    sampleRate: Int,
     axisData: XAxisData, 
     modifier: Modifier = Modifier.height(15.dp)
     /*.border(width = 1.dp, color = Color.Red)*/){
@@ -31,37 +33,13 @@ fun XAxis(
     Row(modifier = modifier){
         Canvas(modifier = modifier) {
             val canvasWidth = size.width
-            val canvasHeight = size.height
-            val period = 1f / axisData.sampleRate
-            val startTime = axisData.startIndex * period
-            //Расчёт количества точек в выборке
-            val deltaTimePerPx = (axisData.signal.size / canvasWidth) * period
+            //Рисование горизонтальной линии оси X
             drawLine(
                 start = Offset(x = 0f, y = 0f ),
                 end = Offset(x = canvasWidth, y = 0f ),
                 color = Color.Black,
                 strokeWidth = 3f
             )
-            for(i in 0 until axisData.steps){
-                drawText(
-                    textMeasurer = textMeasurer,
-                    text = String.format("%.3f",  startTime + i * (canvasWidth / axisData.steps) * deltaTimePerPx),
-                    style = TextStyle(
-                        fontSize = 12.sp,
-                        color = Color.Black
-                    ),
-                    topLeft = Offset(
-                        x = i * (canvasWidth / axisData.steps),
-                        y = 0f
-                    )
-                )
-                drawLine(
-                    start = Offset(x = i * (canvasWidth / axisData.steps), y = 0f ),
-                    end = Offset(x = i * (canvasWidth / axisData.steps), y = 10f ),
-                    color = Color.Black,
-                    strokeWidth = 3f
-                )
-            }
         }
     }
 }
