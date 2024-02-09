@@ -28,6 +28,14 @@ import kotlin.math.roundToInt
 
 //TODO: Есть вариант разделить сигнал и конфигурацию осей
 //TODO: Рефакторинг. Добавить слой ViewModel и настроить взаимодействие через event
+//TODO: Объединить разбросанные параметры по классу в датаклассы (поля должны быть объеденины в группы). Например timeScale и timeOffset можно объединить в xAxisState
+//TODO: Существует проблема, связанная с отрисовкой большого количкства точек на пиксель(перерисовкой одного и того же пикселя) это приводит к лишней работе и тормозам.
+//TODO: Необходимо реализовать механизм проверки, был ли отрисован пиксель или нет.
+//TODO: Не отрисовывать точки (currentIndex + pointPerPx) ?
+//TODO: Привязать метки осей y к offset. зная цену деления одного пикселя по уровню и расстояние между
+// offset и координатой y линии сетки можно определить величину (offset - grid.y) * levelPerPx
+//Если точна вышла за границы по Y, то её учитываем, но не отображаем
+//Добавить кнопки "вернуться к исходному масштабу", freeze X, freeze Y
 
 @Composable
 fun WaveChart(signal: List<Float>,
@@ -36,7 +44,6 @@ fun WaveChart(signal: List<Float>,
               yGridSteps: Int,
               modifier: Modifier
 ){
-
     var chartHeight by remember { mutableStateOf(0) }
     var chartWidth by remember { mutableStateOf(0) }
     val onGloballyPositionedModifier = modifier.onGloballyPositioned {
@@ -72,8 +79,13 @@ fun WaveChart(signal: List<Float>,
     }
     var timeWindowSize = roundedTimeScale * xGridSteps
     var windowSize = (timeWindowSize / samplingPeriod).coerceAtMost(signal.size.toFloat())
-    var plotOffset by remember {
-        mutableStateOf(Offset.Zero)
+    //Смещение центра по оси X
+    var timeOffset by remember {
+        mutableStateOf(0f)
+    }
+    //Смещение по оси Y
+    var levelOffset by remember {
+        mutableStateOf(0f)
     }
     var subSignalListToPlotting by remember {
         mutableStateOf(signal)
@@ -81,16 +93,16 @@ fun WaveChart(signal: List<Float>,
     var centerIndex by remember {
         mutableStateOf(signal.size / 2f)
     }
-
     //Чувствительность отклика на scrolling по оси X
-    val sensitive = subSignalListToPlotting.size.toFloat() / 1000
-
+    val timeSensitivity = subSignalListToPlotting.size.toFloat() / 1000
+    //Чувствительность отклика на scrolling по оси Y
+    var levelSensitivity = roundedLevelScale * 0.005f
     //Расчёт значения центрального элемента выборки из массива точек
-    centerIndex -= plotOffset.x * sensitive
+    centerIndex -= timeOffset * timeSensitivity
     centerIndex = centerIndex
         .coerceAtLeast(windowSize / 2f)
         .coerceAtMost(((signal.size - 1) - windowSize / 2f))
-    plotOffset = Offset.Zero
+    timeOffset = 0f
     //Рассчёт индексов окна выборки данных
     val leftIndex = (centerIndex - (windowSize / 2f))
         .toInt()
@@ -136,21 +148,24 @@ fun WaveChart(signal: List<Float>,
                     numberOfXAxisGridSteps = xAxisData.steps,
                     numberOfYAxisGridSteps = yAxisData.steps,
                     timeScale = roundedTimeScale,
-                    onTransform = {zoomChange, offsetChange ->
-                        //TODO: Я остановился на реализации фичи стабильного детектирования событий по осям
+                    levelScale = roundedLevelScale,
+                    levelOffset = levelOffset,
+                    onTransform = { zoomChange, offsetChange ->
                         selectAxis(
                             offsetChange,
                             onXAxisSelected = {
                                 realTimeScale *= 1 / zoomChange
                                 roundedTimeScale = getRoundedScale(realTimeScale)
-                                plotOffset += offsetChange //time offset
                             },
                             onYAxisSelected = {
                                 realLevelScale *= 1 / zoomChange
                                 roundedLevelScale = getRoundedScale(realLevelScale)
-                                //TODO: levelOffset by remember {mutableStateOf(0f)}
+                                levelSensitivity = roundedLevelScale * 0.005f
                             }
                         )
+                        //Offset изменяется для каждой оси при возникновении события onTransform()
+                        timeOffset += offsetChange.x
+                        levelOffset += offsetChange.y * levelSensitivity
                     },
                     modifier = Modifier
                         .height(chartHeight.dp - xAxisData.offset)
@@ -175,6 +190,10 @@ fun selectAxis(
     onXAxisSelected: () -> Unit,
     onYAxisSelected: () -> Unit
 ){
+    //TODO: После детектирования события запускаем Watchdog таймер.
+    // Он будет сбрасываться после каждого нового последующего события,
+    // тем самым фиксируя тип события по одной из осей. Если же событий пользователяне поступало некоторое время,
+    // то таймер сбрасывает фиксированное состояние и при  последующих попытках pointerInput заново определяется тип оси
     if (offset.x.absoluteValue >= offset.y.absoluteValue){
         onXAxisSelected()
     }

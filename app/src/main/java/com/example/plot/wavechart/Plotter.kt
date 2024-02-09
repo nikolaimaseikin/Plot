@@ -24,10 +24,11 @@ fun Plotter(
     numberOfXAxisGridSteps: Int,
     numberOfYAxisGridSteps: Int,
     timeScale: Float,
+    levelScale: Float,
+    levelOffset: Float,
     onTransform: (zoomChange: Float, offsetChange: Offset) -> Unit,
     modifier: Modifier
 ){
-    var amplitudeScale by remember { mutableStateOf(1f) }
     Canvas(modifier = modifier
         .transformable(state = rememberTransformableState { zoomChange, panChange, _ ->
             onTransform(zoomChange, panChange)
@@ -36,10 +37,10 @@ fun Plotter(
     ){
         val canvasWidth = size.width
         val canvasHeight = size.height
-        val maxValue = if(signal.isNotEmpty()) signal.max() else 0f
-        val yScalingFactor = if(signal.isEmpty()) 0f else (signal.max() - signal.min()) / canvasHeight
         val samplingPeriod: Float = 1 / sampleRate.toFloat()
         val deltaTimePerPx: Float = timeScale / (canvasWidth / numberOfXAxisGridSteps)
+        val deltaLevelPerPx: Float = levelScale / (canvasHeight / numberOfYAxisGridSteps)
+        val zeroLevel = ((canvasHeight / 2) * deltaLevelPerPx) + levelOffset
 
         //Отображение линий сетки по оси X
         if(drawXAxisGrid){
@@ -76,7 +77,7 @@ fun Plotter(
                     radius = 2f,
                     center = Offset(
                         x = (index * samplingPeriod) / deltaTimePerPx,
-                        y = (maxValue - signal[index]) / yScalingFactor
+                        y = (zeroLevel - signal[index]) / deltaLevelPerPx
                     )
                 )
             }
@@ -86,11 +87,11 @@ fun Plotter(
                     drawLine(
                         start = Offset(
                             x = (index * samplingPeriod) / deltaTimePerPx,
-                            y = (maxValue - signal[index]) / yScalingFactor
+                            y = (zeroLevel - signal[index]) /  deltaLevelPerPx
                         ),
                         end = Offset(
                             x = ((index+1) * samplingPeriod) / deltaTimePerPx,
-                            y = (maxValue - signal[index + 1]) / yScalingFactor
+                            y = (zeroLevel - signal[index + 1]) / deltaLevelPerPx
                         ),
                         color = Color.Blue,
                         strokeWidth = 2f
