@@ -2,6 +2,7 @@ package com.example.plot.wavechart
 
 import android.content.res.Resources
 import android.util.Log
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Row
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -14,7 +15,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
 import com.example.plot.wavechart.axis.XAxis
@@ -26,7 +29,7 @@ import com.example.plot.wavechart.util.getRoundedScale
 import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
 
-//TODO: Есть вариант разделить сигнал и конфигурацию осей
+
 //TODO: Рефакторинг. Добавить слой ViewModel и настроить взаимодействие через event
 //TODO: Объединить разбросанные параметры по классу в датаклассы (поля должны быть объеденины в группы). Например timeScale и timeOffset можно объединить в xAxisState
 //TODO: Существует проблема, связанная с отрисовкой большого количкства точек на пиксель(перерисовкой одного и того же пикселя) это приводит к лишней работе и тормозам.
@@ -34,8 +37,11 @@ import kotlin.math.roundToInt
 //TODO: Не отрисовывать точки (currentIndex + pointPerPx) ?
 //TODO: Привязать метки осей y к offset. зная цену деления одного пикселя по уровню и расстояние между
 // offset и координатой y линии сетки можно определить величину (offset - grid.y) * levelPerPx
-//Если точна вышла за границы по Y, то её учитываем, но не отображаем
+//Если точка вышла за границы по Y, то её учитываем, но не отображаем
 //Добавить кнопки "вернуться к исходному масштабу", freeze X, freeze Y
+//TODO: Реализовать смену размерностей сеток и округление  (с, мс, мкс)...
+// Получить текущее значение ращмерности по уровню можно из gtr файла
+//TODO: Реализовать курсоры (отслеживание длительности нажатия)
 
 @Composable
 fun WaveChart(signal: List<Float>,
@@ -132,6 +138,8 @@ fun WaveChart(signal: List<Float>,
     ) {
         Row {
             YAxis(axisData = yAxisData,
+                levelScale = roundedLevelScale,
+                levelOffset = levelOffset,
                 modifier = Modifier
                     .width(yAxisData.offset)
                     .height(chartHeight.dp - xAxisData.offset)
@@ -141,6 +149,7 @@ fun WaveChart(signal: List<Float>,
                 Plotter(
                     signal = subSignalListToPlotting,
                     sampleRate = sampleRate,
+                    drawZeroLevel = true,
                     interpolation = true,
                     drawPoints = false,
                     drawXAxisGrid = true,
@@ -170,8 +179,10 @@ fun WaveChart(signal: List<Float>,
                     modifier = Modifier
                         .height(chartHeight.dp - xAxisData.offset)
                         .width(chartWidth.dp - yAxisData.offset)
+                        //.border(width = 1.dp, color = Color.Red)
                 )
-                XAxis(signal = subSignalListToPlotting,
+                XAxis(
+                    timeScale = roundedTimeScale,
                     sampleRate = sampleRate,
                     axisData = xAxisData,
                     modifier = Modifier
@@ -179,7 +190,6 @@ fun WaveChart(signal: List<Float>,
                         .width(chartWidth.dp - yAxisData.offset)
                         //.border(width = 1.dp, color = Color.Red)
                 )
-
             }
         }
     }

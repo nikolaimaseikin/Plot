@@ -18,16 +18,21 @@ import androidx.compose.ui.unit.sp
 
 @OptIn(ExperimentalTextApi::class)
 @Composable
-fun YAxis(axisData: YAxisData, modifier: Modifier){
+fun YAxis(axisData: YAxisData, levelScale: Float, levelOffset: Float, modifier: Modifier){
     val textMeasurer = rememberTextMeasurer()
     Canvas(modifier = modifier) {
         val canvasWidth = size.width
         val canvasHeight = size.height
-        val axisStepValue = (axisData.maxValue - axisData.minValue) / axisData.steps
+        val pxPerGridStep = canvasHeight / axisData.steps
+        val levelPerPx: Float = levelScale / (canvasHeight / axisData.steps)
+        val zeroLevel = ((canvasHeight / 2) * levelPerPx) + levelOffset
+
         for(i in 0 until axisData.steps){
+            val zeroLevelPx = zeroLevelToPx(zeroLevel, levelPerPx)
+            val gridStepPosition =  i * pxPerGridStep
             drawText(
                 textMeasurer = textMeasurer,
-                text = String.format("%.2f", (axisData.steps - i) * axisStepValue + axisData.minValue),
+                text = String.format("%.2f", (zeroLevelPx - gridStepPosition) * levelPerPx),
                 style = TextStyle(
                     fontSize = 12.sp,
                     color = Color.Black
@@ -50,4 +55,8 @@ fun YAxis(axisData: YAxisData, modifier: Modifier){
             strokeWidth = 3f
         )
     }
+}
+
+fun zeroLevelToPx(zeroLevel: Float, levelPerPx: Float): Float{
+    return zeroLevel / levelPerPx
 }

@@ -10,6 +10,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 
@@ -17,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 fun Plotter(
     signal: List<Float>,
     sampleRate: Int,
+    drawZeroLevel: Boolean,
     interpolation: Boolean,
     drawPoints: Boolean,
     drawXAxisGrid: Boolean,
@@ -30,6 +32,7 @@ fun Plotter(
     modifier: Modifier
 ){
     Canvas(modifier = modifier
+        .clipToBounds()
         .transformable(state = rememberTransformableState { zoomChange, panChange, _ ->
             onTransform(zoomChange, panChange)
         },
@@ -87,7 +90,7 @@ fun Plotter(
                     drawLine(
                         start = Offset(
                             x = (index * samplingPeriod) / deltaTimePerPx,
-                            y = (zeroLevel - signal[index]) /  deltaLevelPerPx
+                            y = (zeroLevel - signal[index]) / deltaLevelPerPx
                         ),
                         end = Offset(
                             x = ((index+1) * samplingPeriod) / deltaTimePerPx,
@@ -98,6 +101,20 @@ fun Plotter(
                     )
                 }
             }
+        }
+        if(drawZeroLevel){
+            drawLine(
+                start = Offset(
+                    x = 0f,
+                    y = zeroLevel / deltaLevelPerPx
+                ),
+                end = Offset(
+                    x = canvasWidth,
+                    y = zeroLevel / deltaLevelPerPx
+                ),
+                color = Color.Green,
+                strokeWidth = 2f
+            )
         }
     }
 }
