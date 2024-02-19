@@ -19,11 +19,14 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.example.plot.cursor.CursorMode
 import com.example.plot.wavechart.axis.XAxis
 import com.example.plot.wavechart.axis.XAxisData
 import com.example.plot.wavechart.axis.YAxis
 import com.example.plot.wavechart.axis.YAxisData
+import com.example.plot.wavechart.cursor.CursorData
 import com.example.plot.wavechart.util.checkSignalChange
 import com.example.plot.wavechart.util.getRoundedScale
 import kotlin.math.absoluteValue
@@ -48,8 +51,21 @@ fun WaveChart(signal: List<Float>,
               sampleRate: Int,
               xGridSteps: Int,
               yGridSteps: Int,
+              reset: Boolean,
+              startCursor: CursorMode,
+              endCursor: CursorMode,
+              onReset: () -> Unit,
               modifier: Modifier
 ){
+    var plotSize by remember {
+        mutableStateOf(IntSize(0, 0))
+    }
+    var startCursorPosition by remember {
+        mutableStateOf(0f)
+    }
+    var endCursorPosition by remember {
+        mutableStateOf(0f)
+    }
     var chartHeight by remember { mutableStateOf(0) }
     var chartWidth by remember { mutableStateOf(0) }
     val onGloballyPositionedModifier = modifier.onGloballyPositioned {
@@ -74,15 +90,6 @@ fun WaveChart(signal: List<Float>,
     var roundedLevelScale by remember {
         mutableStateOf(getRoundedScale(realLevelScale))
     }
-    //Проверка изменения входного сигнала
-    //После рекомпозиции элемента приводит в исходное состояние масштаб сеток
-    checkSignalChange(currentSignal, signal) {
-        currentSignal = signal
-        realTimeScale = (signal.size.toFloat() / xGridSteps) * samplingPeriod
-        roundedTimeScale = getRoundedScale(realTimeScale)
-        realLevelScale = if(signal.isNotEmpty()) (signal.max() - signal.min()) / yGridSteps else 0f
-        roundedLevelScale = getRoundedScale(realLevelScale)
-    }
     var timeWindowSize = roundedTimeScale * xGridSteps
     var windowSize = (timeWindowSize / samplingPeriod).coerceAtMost(signal.size.toFloat())
     //Смещение центра по оси X
@@ -98,6 +105,25 @@ fun WaveChart(signal: List<Float>,
     }
     var centerIndex by remember {
         mutableStateOf(signal.size / 2f)
+    }
+    //Проверка изменения входного сигнала
+    //После рекомпозиции элемента приводит в исходное состояние масштаб сеток
+    checkSignalChange(currentSignal, signal) {
+        currentSignal = signal
+        realTimeScale = (signal.size.toFloat() / xGridSteps) * samplingPeriod
+        roundedTimeScale = getRoundedScale(realTimeScale)
+        realLevelScale = if(signal.isNotEmpty()) (signal.max() - signal.min()) / yGridSteps else 0f
+        roundedLevelScale = getRoundedScale(realLevelScale)
+        levelOffset = 0f
+    }
+    //Проверка команды возврата в исходное состояние
+    if(reset){
+        realTimeScale = (signal.size.toFloat() / xGridSteps) * samplingPeriod
+        roundedTimeScale = getRoundedScale(realTimeScale)
+        realLevelScale = if(signal.isNotEmpty()) (signal.max() - signal.min()) / yGridSteps else 0f
+        roundedLevelScale = getRoundedScale(realLevelScale)
+        levelOffset = 0f
+        onReset()
     }
     //Чувствительность отклика на scrolling по оси X
     val timeSensitivity = subSignalListToPlotting.size.toFloat() / 1000
@@ -128,10 +154,10 @@ fun WaveChart(signal: List<Float>,
     //Параметры конфигурации оси Y
     val yAxisData = YAxisData(
         steps = yGridSteps,
-        minValue = if (subSignalListToPlotting.isNullOrEmpty()) 0f else subSignalListToPlotting.min(),
-        maxValue = if (subSignalListToPlotting.isNullOrEmpty()) 0f else subSignalListToPlotting.max(),
         offset = 30.dp
     )
+    var startCursorData = CursorData(startCursor, startCursorPosition)
+    var endCursorData = CursorData(endCursor, endCursorPosition)
     Surface(modifier = modifier
         .then(onGloballyPositionedModifier)
        //.border(width = 1.dp, color = Color.Magenta)
@@ -148,6 +174,7 @@ fun WaveChart(signal: List<Float>,
             Column {
                 Plotter(
                     signal = subSignalListToPlotting,
+                    startIndex = leftIndex,
                     sampleRate = sampleRate,
                     drawZeroLevel = true,
                     interpolation = true,
@@ -159,22 +186,46 @@ fun WaveChart(signal: List<Float>,
                     timeScale = roundedTimeScale,
                     levelScale = roundedLevelScale,
                     levelOffset = levelOffset,
+                    startCursor = startCursorData,
+                    endCursor = endCursorData,
                     onTransform = { zoomChange, offsetChange ->
-                        selectAxis(
-                            offsetChange,
-                            onXAxisSelected = {
-                                realTimeScale *= 1 / zoomChange
-                                roundedTimeScale = getRoundedScale(realTimeScale)
+                        selectTransformMode(
+                            startCursor,
+                            endCursor,
+                            onAxisTransform = {
+                                selectAxis(
+                                    offsetChange,
+                                    onXAxisSelected = {
+                                        realTimeScale *= 1 / zoomChange
+                                        roundedTimeScale = getRoundedScale(realTimeScale)
+                                    },
+                                    onYAxisSelected = {
+                                        realLevelScale *= 1 / zoomChange
+                                        roundedLevelScale = getRoundedScale(realLevelScale)
+                                        levelSensitivity = roundedLevelScale * 0.005f
+                                    }
+                                )
+                                //Offset изменяется для каждой оси при возникновении события onTransform()
+                                timeOffset += offsetChange.x
+                                levelOffset += offsetChange.y * levelSensitivity
                             },
-                            onYAxisSelected = {
-                                realLevelScale *= 1 / zoomChange
-                                roundedLevelScale = getRoundedScale(realLevelScale)
-                                levelSensitivity = roundedLevelScale * 0.005f
+                            onCursorTransform = {
+                                if(startCursor == CursorMode.MOVE){
+                                    startCursorPosition = (startCursorPosition + offsetChange.x)
+                                        .coerceAtLeast(0f)
+                                        .coerceAtMost(plotSize.width.toFloat())
+                                }
+                                if(endCursor == CursorMode.MOVE){
+                                    endCursorPosition = (endCursorPosition + offsetChange.x)
+                                        .coerceAtLeast(0f)
+                                        .coerceAtMost(plotSize.width.toFloat())
+                                }
+                                Log.d("Cursor", "$startCursorPosition $endCursorPosition")
                             }
                         )
-                        //Offset изменяется для каждой оси при возникновении события onTransform()
-                        timeOffset += offsetChange.x
-                        levelOffset += offsetChange.y * levelSensitivity
+                    },
+                    getSize = {
+                        plotSize = it
                     },
                     modifier = Modifier
                         .height(chartHeight.dp - xAxisData.offset)
@@ -209,6 +260,20 @@ fun selectAxis(
     }
     else{
         onYAxisSelected()
+    }
+}
+
+fun selectTransformMode(
+    startCursor: CursorMode,
+    endCursor: CursorMode,
+    onCursorTransform: () -> Unit,
+    onAxisTransform: () -> Unit
+){
+    if(startCursor == CursorMode.MOVE || endCursor == CursorMode.MOVE){
+        onCursorTransform()
+    }
+    else{
+        onAxisTransform()
     }
 }
 

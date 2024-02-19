@@ -22,7 +22,7 @@ class FileRepositoryImpl: FileRepository {
         //TODO:добавить проверку на null документ или проверку на несоответствие формату .gtr
         var axisData = mutableListOf<Float>()
         try{
-            for(i in (getHeaderLength()+ axis.shift + 4)..((document?.size ?: 0) - 1) step SHIFT_BETWEEN_AXIS){
+            for(i in (getHeaderLength()+ axis.shift + 4) until (document?.size ?: 0) step SHIFT_BETWEEN_AXIS){
                 axisData.add(
                     ByteArrayConverter.getFloatNumberFromByteArray(
                         document, i, i + AXIS_VAL_SIZE

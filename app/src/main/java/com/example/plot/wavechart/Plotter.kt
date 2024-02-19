@@ -1,22 +1,29 @@
 package com.example.plot.wavechart
 
-import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.text.ExperimentalTextApi
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.sp
+import com.example.plot.cursor.CursorMode
+import com.example.plot.wavechart.cursor.CursorData
+import kotlin.math.roundToInt
 
+@OptIn(ExperimentalTextApi::class)
 @Composable
 fun Plotter(
     signal: List<Float>,
+    startIndex: Int,
     sampleRate: Int,
     drawZeroLevel: Boolean,
     interpolation: Boolean,
@@ -28,11 +35,18 @@ fun Plotter(
     timeScale: Float,
     levelScale: Float,
     levelOffset: Float,
+    startCursor: CursorData,
+    endCursor: CursorData,
     onTransform: (zoomChange: Float, offsetChange: Offset) -> Unit,
+    getSize: (width: IntSize) -> Unit,
     modifier: Modifier
 ){
+    val textMeasurer = rememberTextMeasurer()
     Canvas(modifier = modifier
         .clipToBounds()
+        .onGloballyPositioned {
+            getSize(it.size)
+        }
         .transformable(state = rememberTransformableState { zoomChange, panChange, _ ->
             onTransform(zoomChange, panChange)
         },
@@ -84,8 +98,8 @@ fun Plotter(
                     )
                 )
             }
+            //Отрисовка точек данных с учётом интерполяции промежутков между точками прямой линией
             if(interpolation){
-                //Отображение прямой линии, соединяющей 2 соседние точки
                 if(index < signal.size - 1){
                     drawLine(
                         start = Offset(
@@ -102,6 +116,7 @@ fun Plotter(
                 }
             }
         }
+        //Рисование линии 0 данных
         if(drawZeroLevel){
             drawLine(
                 start = Offset(
@@ -114,6 +129,77 @@ fun Plotter(
                 ),
                 color = Color.Green,
                 strokeWidth = 2f
+            )
+        }
+        //Отрисовка линий курсоров
+        if(startCursor.mode == CursorMode.VISIBLE || startCursor.mode == CursorMode.MOVE){
+            drawLine(
+                start = Offset(
+                    x = startCursor.cursorPosition,
+                    y = 0f
+                ),
+                end = Offset(
+                    x = startCursor.cursorPosition,
+                    y = canvasHeight
+                ),
+                color = Color.Red,
+                strokeWidth = 2f
+            )
+        }
+        if(endCursor.mode == CursorMode.VISIBLE || endCursor.mode == CursorMode.MOVE){
+            drawLine(
+                start = Offset(
+                    x = endCursor.cursorPosition,
+                    y = 0f
+                ),
+                end = Offset(
+                    x = endCursor.cursorPosition,
+                    y = canvasHeight
+                ),
+                color = Color.Magenta,
+                strokeWidth = 2f
+            )
+        }
+        //Отрисовка области данных курсоров
+        if(startCursor.mode != CursorMode.INVISIBLE || endCursor.mode != CursorMode.INVISIBLE){
+            val startCursorTime = (startIndex * samplingPeriod) +
+                    (startCursor.cursorPosition * deltaTimePerPx)
+            val endCursorTime = (startIndex * samplingPeriod) +
+                    (endCursor.cursorPosition * deltaTimePerPx)
+            val deltaTime = endCursorTime - startCursorTime
+            val frequency = 1 / deltaTime
+            val startCursorLevel = signal[((startCursor.cursorPosition * deltaTimePerPx) / samplingPeriod)
+                .roundToInt()
+                .coerceAtMost(signal.size)]
+            val endCursorLevel = signal[((endCursor.cursorPosition * deltaTimePerPx) / samplingPeriod)
+                .roundToInt()
+                .coerceAtMost(signal.size)]
+            drawText(
+                textMeasurer = textMeasurer,
+                text = String.format(
+                        "A->T=%.4f\n" +
+                        "A->V=%.4f\n" +
+                        "B->T=%.4f\n" +
+                        "B->V=%.4f\n" +
+                        "Δt=%.4f\n" +
+                        "1/Δt=%.2f\n" +
+                        "ΔV=%.4f",
+                    startCursorTime,
+                    startCursorLevel,
+                    endCursorTime,
+                    endCursorLevel,
+                    deltaTime,
+                    frequency,
+                    endCursorLevel - startCursorLevel
+                ),
+                style = TextStyle(
+                    fontSize = 14.sp,
+                    color = Color.Black
+                ),
+                topLeft = Offset(
+                    x = canvasWidth - 350f,
+                    y = 10f
+                )
             )
         }
     }

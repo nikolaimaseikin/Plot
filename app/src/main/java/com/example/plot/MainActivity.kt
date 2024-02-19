@@ -3,15 +3,12 @@ package com.example.plot
 import android.annotation.SuppressLint
 import android.net.Uri
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -27,9 +24,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.plot.ui.theme.PlotTheme
 import androidx.lifecycle.lifecycleScope
+import com.example.plot.cursor.CursorMode
 import com.example.plot.repository.Axis
 import com.example.plot.repository.FileRepository
 import com.example.plot.repository.FileRepositoryImpl
+import com.example.plot.util.ChartsBottomAppBar
 import com.example.plot.util.ChartsTopAppBar
 import com.example.plot.wavechart.WaveChart
 import kotlinx.coroutines.launch
@@ -63,14 +62,26 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+            var resetStatus by remember { mutableStateOf(false) }
+            var startCursorMode by remember { mutableStateOf(CursorMode.INVISIBLE) }
+            var endCursorMode by remember { mutableStateOf(CursorMode.INVISIBLE) }
+
             PlotTheme {
                 Scaffold(
                     topBar = {
-                        ChartsTopAppBar(
+                        ChartsTopAppBar()
+                    },
+                    bottomBar = {
+                        ChartsBottomAppBar(
+                            onHome = { resetStatus = true },
+                            onCursor = { startCursor, endCursor ->
+                                startCursorMode = startCursor
+                                endCursorMode = endCursor
+                            },
+                            onSync = {},
                             pickFile = { launcher.launch(arrayOf("*/*")) }
                         )
-                             },
-                    modifier = Modifier.fillMaxSize()
+                    }
                 ){
                     Surface(
                         modifier = Modifier.fillMaxSize(),
@@ -78,15 +89,18 @@ class MainActivity : ComponentActivity() {
                     ) {
                         Column(modifier = Modifier
                             .fillMaxSize()
-                            .padding(top = 70.dp)) {
+                            .padding(top = 70.dp, bottom = 70.dp)
+                        ){
                             WaveChart(
                                 signal = signal,
                                 sampleRate = 128000,
                                 xGridSteps = 6,
                                 yGridSteps = 10,
-                                modifier = Modifier
-                                    .height(400.dp)
-                                    .fillMaxWidth()
+                                reset = resetStatus,
+                                startCursor = startCursorMode,
+                                endCursor = endCursorMode,
+                                onReset = { resetStatus = false },
+                                modifier = Modifier.fillMaxSize()
                             )
                         }
                     }
